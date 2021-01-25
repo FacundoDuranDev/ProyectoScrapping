@@ -22,44 +22,46 @@ language = []
 casting = []
 hrefs = []
 
+# Función Encargada de Hacerle Frente al Scroll Infinito.
+
 
 def scroll(driver, timeout):
     scroll_pause_time = timeout
 
-    # Get scroll height
+    # Toma la altura del Scroll
     last_height = driver.execute_script("return document.body.scrollHeight")
 
     while True:
-        # Scroll down to bottom
+        # Scrollea hasta el final
         driver.execute_script(
             "window.scrollTo(0, document.body.scrollHeight);")
 
-        # Wait to load page
+        # Espera a que la pagina cargue
         sleep(scroll_pause_time)
 
-        # Calculate new scroll height and compare with last scroll height
+        # Calcula la nueva altura del scroll y la compara con la ultima altura de scroll
         new_height = driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
-            # If heights are the same it will exit the function
+            # si las alturas son iguales, la función se quiebra
             break
         last_height = new_height
 
 
 def all_links(url):
-    # Setup the driver. This one uses firefox with some options and a path to the geckodriver
+    # Prepara el driver
     driver = webdriver.Chrome(
         executable_path=r"C:\Users\Usuario\Desktop\Programacion\Selenium\chromedriver"
     )
-    # implicitly_wait tells the driver to wait before throwing an exception
+    # Espera antes de lanzar una excepción
     driver.implicitly_wait(30)
-    # driver.get(url) opens the page
+    # driver.get(url) Abre la página
     driver.get(url)
-    # This starts the scrolling by passing the driver and a timeout
+    # Activa la función de Scrolling infinito
     scroll(driver, 5)
-    # Empty array to store the links
+
     soup_a = BeautifulSoup(driver.page_source, 'lxml')
 
-    # Looping through all the a elements in the page source
+    # Cicla por todos los elementos de la pagina, tomando todos los links y sumandolos a una lista llamada Href
     for container in soup_a.find_all('div', class_='_1Opa2_ dvui-packshot av-grid-packshot'):
         href = container.find('a')
         hrefs.append(href.get('href'))
@@ -67,13 +69,16 @@ def all_links(url):
 
 
 def all_data(hrefs):
+    # Prepara el Driver
     driver = webdriver.Chrome(
         executable_path=r"C:\Users\Usuario\Desktop\Programacion\Selenium\chromedriver"
     )
+    # Cicla por la lista de links para poder scrappear cada una de las páginas
     for link in hrefs:
         url = 'https://www.amazon.com/' + str(link)
         driver.get(url)
         soup_b = BeautifulSoup(driver.page_source, 'lxml')
+        # Titulo
         if soup_b.find(
                 'h1', {"data-automation-id": "title"}) is not None:
             title = soup_b.find(
@@ -85,6 +90,7 @@ def all_data(hrefs):
                 titles.append('N/A')
         else:
             titles.append('N/A')
+        # Año
         if soup_b.find(
                 'span', {"data-automation-id": "release-year-badge"}) is not None:
             year = soup_b.find(
@@ -95,6 +101,7 @@ def all_data(hrefs):
                 years.append('N/A')
         else:
             years.append('N/A')
+        # Duración de la pelicula
         if soup_b.find('span', {"data-automation-id": "runtime-badge"}) is not None:
             runtime = soup_b.find(
                 'span', {"data-automation-id": "runtime-badge"})
@@ -102,6 +109,7 @@ def all_data(hrefs):
                 time.append(runtime.text)
             except:
                 time.append('N/A')
+        # IMDB Rate
         if soup_b.find('span', {"data-automation-id": "imdb-rating-badge"}) is not None:
             rate = soup_b.find(
                 'span', {"data-automation-id": "imdb-rating-badge"})
@@ -111,13 +119,14 @@ def all_data(hrefs):
                 imdb_ratings.append('N/A')
         else:
             imdb_ratings.append('N/A')
-
+        # Director
         if soup_b.find('div', class_='_1ONDJH').find('dd') is not None:
             direct = soup_b.find('div', class_='_1ONDJH').find('dd')
             try:
                 director.append(direct.text)
             except:
                 director.append('N/A')
+        # Género
         if soup_b.find_all('dd')[2].find_all('a') is not None:
             genre = soup_b.find_all('dd')[2].find('a')
             try:
@@ -137,6 +146,7 @@ def all_data(hrefs):
             except:
                 genres.append('N/A')
             casting.append('N/A')
+        # Descripción
         if soup_b.find('div', class_='_3qsVvm _1wxob_').find('div') is not None:
             info = soup_b.find('div', class_='_3qsVvm _1wxob_').find('div')
             try:
@@ -145,6 +155,7 @@ def all_data(hrefs):
                 description.append('N/A')
         else:
             description.append('N/A')
+        # Lenguaje Original
         if soup_b.find('dl', class_='_2czKtE').find('dd') is not None:
             lang = soup_b.find('dl', class_='_2czKtE').find('dd')
             try:
@@ -153,16 +164,9 @@ def all_data(hrefs):
                 language.append('N/A')
         else:
             language.append('N/A')
-
-        print(len(titles),
-              len(years),
-              len(time),
-              len(imdb_ratings),
-              len(director),
-              len(casting),
-              len(hrefs),
-              len(genres),
-              len(description))
+        # Print para ver visualmente en la consola el recorrido del bucle, sabiendo cuantos faltan para llegar al final.
+        print(len(titles), len(hrefs))
+        # Esto está dentro del bucle por si Amazon detecta el scrapping no perder toda la información scrappeada.
         movies = pd.DataFrame({
             'movie': titles,
             'director': director,
@@ -178,6 +182,7 @@ def all_data(hrefs):
 
 
 # all_links(r'https://www.amazon.com/gp/video/search/ref=atv_sr_breadcrumb_p_n_ways_to_watch?ie=UTF8&pageId=default&tag=justus1ktp-20&queryToken=eyJ0eXBlIjoicXVlcnkiLCJuYXYiOnRydWUsInBpIjoiZGVmYXVsdCIsInNlYyI6ImNlbnRlciIsInN0eXBlIjoic2VhcmNoIiwicXJ5Ijoibm9kZT0xNjE4Mzg5MjAxMSZwX25fZW50aXR5X3R5cGU9MTQwNjkxODQwMTEmYWR1bHQtcHJvZHVjdD0wJnNlYXJjaC1hbGlhcz1pbnN0YW50LXZpZGVvJmJibj0xNjE4Mzg5MjAxMSZxcy1hdl9yZXF1ZXN0X3R5cGU9NCZxcy1pcy1wcmltZS1jdXN0b21lcj0wIiwicnQiOiJZem0xaTdzbXIiLCJ0eHQiOiIiLCJzdWJ0eHQiOiIiLCJvZmZzZXQiOjAsIm5wc2kiOjAsIm9yZXEiOiJjZTJiNDk3Ni0zZWM0LTQxMmItOTM5MS1jNGFkMGYyYzFiNDA6MTYxMTI3NTUyMjAwMCIsInN0cmlkIjoiMToxMThUMU1FR0I5NFMxTSMjTVpRV0daTFVNVlNFR1lMU041MlhHWkxNIiwib3JlcWsiOiJMaTYrby9nc2gwaEdDY1RnYVRnS0x6bWJBenR6bmdvc29lSTA2emFoZmRJPSIsIm9yZXFrdiI6MX0%3D&queryPageType=browse&phrase')
+# La función de arriba logra todos estos resultados, los copié dentro del codigo para evitar tenes que ejecutarlo cada vez que hacía una prueba.
 hrefs = ['/gp/video/detail/B08NLFDCXZ/ref=atv_br_def_r_br_c_unkc_1_1?tag=justus1ktp-20', '/gp/video/detail/B08P2Y96V1/ref=atv_br_def_r_br_c_unkc_1_2?tag=justus1ktp-20', '/gp/video/detail/B07YSX9HSC/ref=atv_br_def_r_br_c_unkc_1_3?tag=justus1ktp-20', '/gp/video/detail/B08L48LTPY/ref=atv_br_def_r_br_c_unkc_1_4?tag=justus1ktp-20', '/gp/video/detail/B08KZD3FZ4/ref=atv_br_def_r_br_c_unkc_1_5?tag=justus1ktp-20', '/gp/video/detail/B08DK7KZQ8/ref=atv_br_def_r_br_c_unkc_1_6?tag=justus1ktp-20', '/gp/video/detail/B08DX1WFWK/ref=atv_br_def_r_br_c_unkc_1_7?tag=justus1ktp-20', '/gp/video/detail/B002SSLOA2/ref=atv_br_def_r_br_c_unkc_1_8?tag=justus1ktp-20', '/gp/video/detail/B08DD7MCM5/ref=atv_br_def_r_br_c_unkc_1_9?tag=justus1ktp-20', '/gp/video/detail/B08DGXHQMH/ref=atv_br_def_r_br_c_unkc_1_10?tag=justus1ktp-20', '/gp/video/detail/B083JND58N/ref=atv_br_def_r_br_c_unkc_1_11?tag=justus1ktp-20', '/gp/video/detail/B004MWSUXG/ref=atv_br_def_r_br_c_unkc_1_12?tag=justus1ktp-20', '/gp/video/detail/B08KZCMFRQ/ref=atv_br_def_r_br_c_unkc_1_13?tag=justus1ktp-20', '/gp/video/detail/B0847RT7K2/ref=atv_br_def_r_br_c_unkc_1_14?tag=justus1ktp-20', '/gp/video/detail/B000Y96EWK/ref=atv_br_def_r_br_c_unkc_1_15?tag=justus1ktp-20', '/gp/video/detail/B08K3SDZJ9/ref=atv_br_def_r_br_c_unkc_1_16?tag=justus1ktp-20', '/gp/video/detail/B08DWNYLJY/ref=atv_br_def_r_br_c_unkc_1_17?tag=justus1ktp-20', '/gp/video/detail/B07ZP8J83T/ref=atv_br_def_r_br_c_unkc_1_18?tag=justus1ktp-20', '/gp/video/detail/B08GH2C7LJ/ref=atv_br_def_r_br_c_unkc_1_19?tag=justus1ktp-20', '/gp/video/detail/B08J98LNZ4/ref=atv_br_def_r_br_c_unkc_1_20?tag=justus1ktp-20', '/gp/video/detail/B08J8JH4T9/ref=atv_br_def_r_br_c_Yzm1i7smr_1_21?tag=justus1ktp-20', '/gp/video/detail/B0849Q1NC8/ref=atv_br_def_r_br_c_Yzm1i7smr_1_22?tag=justus1ktp-20', '/gp/video/detail/B082M39WXN/ref=atv_br_def_r_br_c_Yzm1i7smr_1_23?tag=justus1ktp-20', '/gp/video/detail/B0829J2DY2/ref=atv_br_def_r_br_c_Yzm1i7smr_1_24?tag=justus1ktp-20', '/gp/video/detail/B08KZCFW1C/ref=atv_br_def_r_br_c_Yzm1i7smr_1_25?tag=justus1ktp-20', '/gp/video/detail/B088G1DLF5/ref=atv_br_def_r_br_c_Yzm1i7smr_1_26?tag=justus1ktp-20', '/gp/video/detail/B07JMZ4HVH/ref=atv_br_def_r_br_c_Yzm1i7smr_1_27?tag=justus1ktp-20', '/gp/video/detail/B081W544J7/ref=atv_br_def_r_br_c_Yzm1i7smr_1_28?tag=justus1ktp-20', '/gp/video/detail/B088XTRN9N/ref=atv_br_def_r_br_c_Yzm1i7smr_1_29?tag=justus1ktp-20', '/gp/video/detail/B086BLV52Y/ref=atv_br_def_r_br_c_Yzm1i7smr_1_30?tag=justus1ktp-20', '/gp/video/detail/B08NWXVCZ6/ref=atv_br_def_r_br_c_Yzm1i7smr_1_31?tag=justus1ktp-20', '/gp/video/detail/B08GJ7F9Y2/ref=atv_br_def_r_br_c_Yzm1i7smr_1_32?tag=justus1ktp-20', '/gp/video/detail/B000I9U99K/ref=atv_br_def_r_br_c_Yzm1i7smr_1_33?tag=justus1ktp-20', '/gp/video/detail/B000SVZILW/ref=atv_br_def_r_br_c_Yzm1i7smr_1_34?tag=justus1ktp-20', '/gp/video/detail/B07QPVMBLK/ref=atv_br_def_r_br_c_Yzm1i7smr_1_35?tag=justus1ktp-20', '/gp/video/detail/B06VY19XFP/ref=atv_br_def_r_br_c_Yzm1i7smr_1_36?tag=justus1ktp-20', '/gp/video/detail/B01IG0E1F0/ref=atv_br_def_r_br_c_Yzm1i7smr_1_37?tag=justus1ktp-20', '/gp/video/detail/B08DK3CNP7/ref=atv_br_def_r_br_c_Yzm1i7smr_1_38?tag=justus1ktp-20', '/gp/video/detail/B000XJSL9U/ref=atv_br_def_r_br_c_Yzm1i7smr_1_39?tag=justus1ktp-20', '/gp/video/detail/B088MK498V/ref=atv_br_def_r_br_c_Yzm1i7smr_1_40?tag=justus1ktp-20', '/gp/video/detail/B0113Q2AXY/ref=atv_br_def_r_br_c_Yzm1i7smr_1_41?tag=justus1ktp-20', '/gp/video/detail/B004NDDD04/ref=atv_br_def_r_br_c_Yzm1i7smr_1_42?tag=justus1ktp-20', '/gp/video/detail/B08K8DKY5T/ref=atv_br_def_r_br_c_Yzm1i7smr_1_43?tag=justus1ktp-20', '/gp/video/detail/B000M51XI6/ref=atv_br_def_r_br_c_Yzm1i7smr_1_44?tag=justus1ktp-20', '/gp/video/detail/B07KFPM9BV/ref=atv_br_def_r_br_c_Yzm1i7smr_1_45?tag=justus1ktp-20', '/gp/video/detail/B08DK2F9TM/ref=atv_br_def_r_br_c_Yzm1i7smr_1_46?tag=justus1ktp-20', '/gp/video/detail/B07W4KBZ39/ref=atv_br_def_r_br_c_Yzm1i7smr_1_47?tag=justus1ktp-20', '/gp/video/detail/B08CS4K94T/ref=atv_br_def_r_br_c_Yzm1i7smr_1_48?tag=justus1ktp-20',
          '/gp/video/detail/B07RDQCC3T/ref=atv_br_def_r_br_c_Yzm1i7smr_1_49?tag=justus1ktp-20', '/gp/video/detail/B08N6SCNCH/ref=atv_br_def_r_br_c_Yzm1i7smr_1_50?tag=justus1ktp-20', '/gp/video/detail/B08J8HH3QR/ref=atv_br_def_r_br_c_Yzm1i7smr_1_51?tag=justus1ktp-20', '/gp/video/detail/B08D9SB13H/ref=atv_br_def_r_br_c_Yzm1i7smr_1_52?tag=justus1ktp-20', '/gp/video/detail/B07R6VS9Q9/ref=atv_br_def_r_br_c_Yzm1i7smr_1_53?tag=justus1ktp-20', '/gp/video/detail/B003SI6C4O/ref=atv_br_def_r_br_c_Yzm1i7smr_1_54?tag=justus1ktp-20', '/gp/video/detail/B08N1PHJ5V/ref=atv_br_def_r_br_c_Yzm1i7smr_1_55?tag=justus1ktp-20', '/gp/video/detail/B002LSVRLK/ref=atv_br_def_r_br_c_Yzm1i7smr_1_56?tag=justus1ktp-20', '/gp/video/detail/B00N5ENZC8/ref=atv_br_def_r_br_c_Yzm1i7smr_1_57?tag=justus1ktp-20', '/gp/video/detail/B004BEMC6G/ref=atv_br_def_r_br_c_Yzm1i7smr_1_58?tag=justus1ktp-20', '/gp/video/detail/B08PVW932H/ref=atv_br_def_r_br_c_Yzm1i7smr_1_59?tag=justus1ktp-20', '/gp/video/detail/B002SGYPS2/ref=atv_br_def_r_br_c_Yzm1i7smr_1_60?tag=justus1ktp-20', '/gp/video/detail/B07FSQDJKG/ref=atv_br_def_r_br_c_Yzm1i7smr_1_61?tag=justus1ktp-20', '/gp/video/detail/B000RVK3QS/ref=atv_br_def_r_br_c_Yzm1i7smr_1_62?tag=justus1ktp-20', '/gp/video/detail/B001L5YW9I/ref=atv_br_def_r_br_c_Yzm1i7smr_1_63?tag=justus1ktp-20', '/gp/video/detail/B00MQOXI8Y/ref=atv_br_def_r_br_c_Yzm1i7smr_1_64?tag=justus1ktp-20', '/gp/video/detail/B003EVJSBE/ref=atv_br_def_r_br_c_Yzm1i7smr_1_65?tag=justus1ktp-20', '/gp/video/detail/B07NQVZFC1/ref=atv_br_def_r_br_c_Yzm1i7smr_1_66?tag=justus1ktp-20', '/gp/video/detail/B07RZP4BJW/ref=atv_br_def_r_br_c_Yzm1i7smr_1_67?tag=justus1ktp-20', '/gp/video/detail/B07MCW4WSG/ref=atv_br_def_r_br_c_Yzm1i7smr_1_68?tag=justus1ktp-20', '/gp/video/detail/B001B8LFS6/ref=atv_br_def_r_br_c_Yzm1i7smr_1_69?tag=justus1ktp-20', '/gp/video/detail/B005BG2FII/ref=atv_br_def_r_br_c_Yzm1i7smr_1_70?tag=justus1ktp-20', '/gp/video/detail/B08KZQD75Z/ref=atv_br_def_r_br_c_Yzm1i7smr_1_71?tag=justus1ktp-20', '/gp/video/detail/B08DK66KLR/ref=atv_br_def_r_br_c_Yzm1i7smr_1_72?tag=justus1ktp-20', '/gp/video/detail/B07L6N8ZJT/ref=atv_br_def_r_br_c_Yzm1i7smr_1_73?tag=justus1ktp-20', '/gp/video/detail/B005OT2YVA/ref=atv_br_def_r_br_c_Yzm1i7smr_1_74?tag=justus1ktp-20', '/gp/video/detail/B08QM7VSYX/ref=atv_br_def_r_br_c_Yzm1i7smr_1_75?tag=justus1ktp-20', '/gp/video/detail/B008NCSZQ8/ref=atv_br_def_r_br_c_Yzm1i7smr_1_76?tag=justus1ktp-20', '/gp/video/detail/B08LP8NLRQ/ref=atv_br_def_r_br_c_Yzm1i7smr_1_77?tag=justus1ktp-20', '/gp/video/detail/B08MX82NMG/ref=atv_br_def_r_br_c_Yzm1i7smr_1_78?tag=justus1ktp-20', '/gp/video/detail/B08N71Q3F4/ref=atv_br_def_r_br_c_Yzm1i7smr_1_79?tag=justus1ktp-20', '/gp/video/detail/B08J8LSZ4S/ref=atv_br_def_r_br_c_Yzm1i7smr_1_80?tag=justus1ktp-20', '/gp/video/detail/B004AQR24W/ref=atv_br_def_r_br_c_Yzm1i7smr_1_81?tag=justus1ktp-20', '/gp/video/detail/B08F77P8C9/ref=atv_br_def_r_br_c_Yzm1i7smr_1_82?tag=justus1ktp-20', '/gp/video/detail/B001M432XA/ref=atv_br_def_r_br_c_Yzm1i7smr_1_83?tag=justus1ktp-20', '/gp/video/detail/B08B4XGYGC/ref=atv_br_def_r_br_c_Yzm1i7smr_1_84?tag=justus1ktp-20', '/gp/video/detail/B008OM0EDO/ref=atv_br_def_r_br_c_Yzm1i7smr_1_85?tag=justus1ktp-20', '/gp/video/detail/B000YCCPR0/ref=atv_br_def_r_br_c_Yzm1i7smr_1_86?tag=justus1ktp-20', '/gp/video/detail/B07WFK2PF3/ref=atv_br_def_r_br_c_Yzm1i7smr_1_87?tag=justus1ktp-20', '/gp/video/detail/B08NTRPZ8V/ref=atv_br_def_r_br_c_Yzm1i7smr_1_88?tag=justus1ktp-20', '/gp/video/detail/B0868SXKPZ/ref=atv_br_def_r_br_c_Yzm1i7smr_1_89?tag=justus1ktp-20', '/gp/video/detail/B08N6RGQZK/ref=atv_br_def_r_br_c_Yzm1i7smr_1_90?tag=justus1ktp-20', '/gp/video/detail/B08MN2QLWL/ref=atv_br_def_r_br_c_Yzm1i7smr_1_91?tag=justus1ktp-20', '/gp/video/detail/B08NPLQCKK/ref=atv_br_def_r_br_c_Yzm1i7smr_1_92?tag=justus1ktp-20', '/gp/video/detail/B000I9YXQU/ref=atv_br_def_r_br_c_Yzm1i7smr_1_93?tag=justus1ktp-20', '/gp/video/detail/B00K1MAGG0/ref=atv_br_def_r_br_c_Yzm1i7smr_1_94?tag=justus1ktp-20', '/gp/video/detail/B07NCX7DRM/ref=atv_br_def_r_br_c_Yzm1i7smr_1_95?tag=justus1ktp-20', '/gp/video/detail/B008XKSW7M/ref=atv_br_def_r_br_c_Yzm1i7smr_1_96?tag=justus1ktp-20', '/gp/video/detail/B08KGXFTTZ/ref=atv_br_def_r_br_c_Yzm1i7smr_1_97?tag=justus1ktp-20', '/gp/video/detail/B0844J5D4S/ref=atv_br_def_r_br_c_Yzm1i7smr_1_98?tag=justus1ktp-20', '/gp/video/detail/B01AZ0VTUE/ref=atv_br_def_r_br_c_Yzm1i7smr_1_99?tag=justus1ktp-20', '/gp/video/detail/B001W880O2/ref=atv_br_def_r_br_c_Yzm1i7smr_1_100?tag=justus1ktp-20', '/gp/video/detail/B00C4QGTWG/ref=atv_br_def_r_br_c_Yzm1i7smr_1_101?tag=justus1ktp-20', '/gp/video/detail/B08PKJ1LLL/ref=atv_br_def_r_br_c_Yzm1i7smr_1_102?tag=justus1ktp-20', '/gp/video/detail/B08N6XX8P6/ref=atv_br_def_r_br_c_Yzm1i7smr_1_103?tag=justus1ktp-20', '/gp/video/detail/B0881XBZ6Z/ref=atv_br_def_r_br_c_Yzm1i7smr_1_104?tag=justus1ktp-20', '/gp/video/detail/B089Y25SFZ/ref=atv_br_def_r_br_c_Yzm1i7smr_1_105?tag=justus1ktp-20', '/gp/video/detail/B08J8HB4CM/ref=atv_br_def_r_br_c_Yzm1i7smr_1_106?tag=justus1ktp-20', '/gp/video/detail/B07S6Q1ML7/ref=atv_br_def_r_br_c_Yzm1i7smr_1_107?tag=justus1ktp-20', '/gp/video/detail/B000ICGGXU/ref=atv_br_def_r_br_c_Yzm1i7smr_1_108?tag=justus1ktp-20', '/gp/video/detail/B08M9Y5R7N/ref=atv_br_def_r_br_c_Yzm1i7smr_1_109?tag=justus1ktp-20', '/gp/video/detail/B009WUAK2M/ref=atv_br_def_r_br_c_Yzm1i7smr_1_110?tag=justus1ktp-20', '/gp/video/detail/B08KKLS759/ref=atv_br_def_r_br_c_Yzm1i7smr_1_111?tag=justus1ktp-20', '/gp/video/detail/B007IK44CK/ref=atv_br_def_r_br_c_Yzm1i7smr_1_112?tag=justus1ktp-20', '/gp/video/detail/B001JXJ9K4/ref=atv_br_def_r_br_c_Yzm1i7smr_1_113?tag=justus1ktp-20', '/gp/video/detail/B000I9X64K/ref=atv_br_def_r_br_c_Yzm1i7smr_1_114?tag=justus1ktp-20', '/gp/video/detail/B07FCX6R3F/ref=atv_br_def_r_br_c_Yzm1i7smr_1_115?tag=justus1ktp-20', '/gp/video/detail/B08KZCYS8P/ref=atv_br_def_r_br_c_Yzm1i7smr_1_116?tag=justus1ktp-20', '/gp/video/detail/B07HHR4SCS/ref=atv_br_def_r_br_c_Yzm1i7smr_1_117?tag=justus1ktp-20', '/gp/video/detail/B0815R34D5/ref=atv_br_def_r_br_c_Yzm1i7smr_1_118?tag=justus1ktp-20', '/gp/video/detail/B08B7LH2XM/ref=atv_br_def_r_br_c_Yzm1i7smr_1_119?tag=justus1ktp-20', '/gp/video/detail/B08RRFK8CN/ref=atv_br_def_r_br_c_Yzm1i7smr_1_120?tag=justus1ktp-20', '/gp/video/detail/B08JJKVNF1/ref=atv_br_def_r_br_c_Yzm1i7smr_1_121?tag=justus1ktp-20', '/gp/video/detail/B08DX3HPKC/ref=atv_br_def_r_br_c_Yzm1i7smr_1_122?tag=justus1ktp-20', '/gp/video/detail/B07BC4RC2X/ref=atv_br_def_r_br_c_Yzm1i7smr_1_123?tag=justus1ktp-20', '/gp/video/detail/B007VH1XMY/ref=atv_br_def_r_br_c_Yzm1i7smr_1_124?tag=justus1ktp-20', '/gp/video/detail/B001688V2E/ref=atv_br_def_r_br_c_Yzm1i7smr_1_125?tag=justus1ktp-20', '/gp/video/detail/B07Y5RJYDV/ref=atv_br_def_r_br_c_Yzm1i7smr_1_126?tag=justus1ktp-20', '/gp/video/detail/B07KPZNVTQ/ref=atv_br_def_r_br_c_Yzm1i7smr_1_127?tag=justus1ktp-20', '/gp/video/detail/B07H29NMGL/ref=atv_br_def_r_br_c_Yzm1i7smr_1_128?tag=justus1ktp-20', '/gp/video/detail/B0030B0S6W/ref=atv_br_def_r_br_c_Yzm1i7smr_1_129?tag=justus1ktp-20', '/gp/video/detail/B008UO5U9E/ref=atv_br_def_r_br_c_Yzm1i7smr_1_130?tag=justus1ktp-20', '/gp/video/detail/B00BQ7O7SM/ref=atv_br_def_r_br_c_Yzm1i7smr_1_131?tag=justus1ktp-20', '/gp/video/detail/B006YGMAIE/ref=atv_br_def_r_br_c_Yzm1i7smr_1_132?tag=justus1ktp-20', '/gp/video/detail/B08KTD6RGY/ref=atv_br_def_r_br_c_Yzm1i7smr_1_133?tag=justus1ktp-20', '/gp/video/detail/B08KGVCCYY/ref=atv_br_def_r_br_c_Yzm1i7smr_1_134?tag=justus1ktp-20', '/gp/video/detail/B000KWLRL4/ref=atv_br_def_r_br_c_Yzm1i7smr_1_135?tag=justus1ktp-20', '/gp/video/detail/B088T29WZJ/ref=atv_br_def_r_br_c_Yzm1i7smr_1_136?tag=justus1ktp-20', '/gp/video/detail/B089XVDTTF/ref=atv_br_def_r_br_c_Yzm1i7smr_1_137?tag=justus1ktp-20', '/gp/video/detail/B08NNZ58BQ/ref=atv_br_def_r_br_c_Yzm1i7smr_1_138?tag=justus1ktp-20', '/gp/video/detail/B086H2WZ4S/ref=atv_br_def_r_br_c_Yzm1i7smr_1_139?tag=justus1ktp-20', '/gp/video/detail/B086P4QMGL/ref=atv_br_def_r_br_c_Yzm1i7smr_1_140?tag=justus1ktp-20', '/gp/video/detail/B0875JBTGM/ref=atv_br_def_r_br_c_Yzm1i7smr_1_141?tag=justus1ktp-20',
          '/gp/video/detail/B08J8HFTLC/ref=atv_br_def_r_br_c_Yzm1i7smr_1_142?tag=justus1ktp-20', '/gp/video/detail/B07MDSFVPZ/ref=atv_br_def_r_br_c_Yzm1i7smr_1_143?tag=justus1ktp-20', '/gp/video/detail/B08P5FXYKQ/ref=atv_br_def_r_br_c_Yzm1i7smr_1_144?tag=justus1ktp-20', '/gp/video/detail/B08QYXJL3V/ref=atv_br_def_r_br_c_Yzm1i7smr_1_145?tag=justus1ktp-20', '/gp/video/detail/B07J3Y284X/ref=atv_br_def_r_br_c_Yzm1i7smr_1_146?tag=justus1ktp-20', '/gp/video/detail/B07DHZ6DL9/ref=atv_br_def_r_br_c_Yzm1i7smr_1_147?tag=justus1ktp-20', '/gp/video/detail/B087CJQM7J/ref=atv_br_def_r_br_c_Yzm1i7smr_1_148?tag=justus1ktp-20', '/gp/video/detail/B00170M2GW/ref=atv_br_def_r_br_c_Yzm1i7smr_1_149?tag=justus1ktp-20', '/gp/video/detail/B07VKS6GDN/ref=atv_br_def_r_br_c_Yzm1i7smr_1_150?tag=justus1ktp-20', '/gp/video/detail/B07HXW61VR/ref=atv_br_def_r_br_c_Yzm1i7smr_1_151?tag=justus1ktp-20', '/gp/video/detail/B07J6586WJ/ref=atv_br_def_r_br_c_Yzm1i7smr_1_152?tag=justus1ktp-20', '/gp/video/detail/B01MS2S53A/ref=atv_br_def_r_br_c_Yzm1i7smr_1_153?tag=justus1ktp-20', '/gp/video/detail/B07FYV4ZC5/ref=atv_br_def_r_br_c_Yzm1i7smr_1_154?tag=justus1ktp-20', '/gp/video/detail/B08NFPQL2G/ref=atv_br_def_r_br_c_Yzm1i7smr_1_155?tag=justus1ktp-20', '/gp/video/detail/B0875TCNC4/ref=atv_br_def_r_br_c_Yzm1i7smr_1_156?tag=justus1ktp-20', '/gp/video/detail/B00GBUQXSG/ref=atv_br_def_r_br_c_Yzm1i7smr_1_157?tag=justus1ktp-20', '/gp/video/detail/B08BPLQH3K/ref=atv_br_def_r_br_c_Yzm1i7smr_1_158?tag=justus1ktp-20', '/gp/video/detail/B07H7W4DV9/ref=atv_br_def_r_br_c_Yzm1i7smr_1_159?tag=justus1ktp-20', '/gp/video/detail/B08P3Y5W9Y/ref=atv_br_def_r_br_c_Yzm1i7smr_1_160?tag=justus1ktp-20', '/gp/video/detail/B08KF5H561/ref=atv_br_def_r_br_c_Yzm1i7smr_1_161?tag=justus1ktp-20', '/gp/video/detail/B07HHTZN2T/ref=atv_br_def_r_br_c_Yzm1i7smr_1_162?tag=justus1ktp-20', '/gp/video/detail/B081X8G4BY/ref=atv_br_def_r_br_c_Yzm1i7smr_1_163?tag=justus1ktp-20', '/gp/video/detail/B08K3LML17/ref=atv_br_def_r_br_c_Yzm1i7smr_1_164?tag=justus1ktp-20', '/gp/video/detail/B076DJ1X3S/ref=atv_br_def_r_br_c_Yzm1i7smr_1_165?tag=justus1ktp-20', '/gp/video/detail/B07F179SZK/ref=atv_br_def_r_br_c_Yzm1i7smr_1_166?tag=justus1ktp-20', '/gp/video/detail/B087H5L7QN/ref=atv_br_def_r_br_c_Yzm1i7smr_1_167?tag=justus1ktp-20', '/gp/video/detail/B07VKQM7TC/ref=atv_br_def_r_br_c_Yzm1i7smr_1_168?tag=justus1ktp-20', '/gp/video/detail/B07HLY6N7D/ref=atv_br_def_r_br_c_Yzm1i7smr_1_169?tag=justus1ktp-20', '/gp/video/detail/B08CS3B8R2/ref=atv_br_def_r_br_c_Yzm1i7smr_1_170?tag=justus1ktp-20', '/gp/video/detail/B08N6SSL7X/ref=atv_br_def_r_br_c_Yzm1i7smr_1_171?tag=justus1ktp-20', '/gp/video/detail/B08DL6P44L/ref=atv_br_def_r_br_c_Yzm1i7smr_1_172?tag=justus1ktp-20', '/gp/video/detail/B089Y611NH/ref=atv_br_def_r_br_c_Yzm1i7smr_1_173?tag=justus1ktp-20', '/gp/video/detail/B07KLR41TS/ref=atv_br_def_r_br_c_Yzm1i7smr_1_174?tag=justus1ktp-20', '/gp/video/detail/B08PHRD4VS/ref=atv_br_def_r_br_c_Yzm1i7smr_1_175?tag=justus1ktp-20', '/gp/video/detail/B0010XRNC4/ref=atv_br_def_r_br_c_Yzm1i7smr_1_176?tag=justus1ktp-20', '/gp/video/detail/B07J16M61N/ref=atv_br_def_r_br_c_Yzm1i7smr_1_177?tag=justus1ktp-20', '/gp/video/detail/B07XVRLKT1/ref=atv_br_def_r_br_c_Yzm1i7smr_1_178?tag=justus1ktp-20', '/gp/video/detail/B08JYBG4DG/ref=atv_br_def_r_br_c_Yzm1i7smr_1_179?tag=justus1ktp-20', '/gp/video/detail/B08HPNWDZG/ref=atv_br_def_r_br_c_Yzm1i7smr_1_180?tag=justus1ktp-20', '/gp/video/detail/B07QDRLTMK/ref=atv_br_def_r_br_c_Yzm1i7smr_1_181?tag=justus1ktp-20', '/gp/video/detail/B084KJDJKW/ref=atv_br_def_r_br_c_Yzm1i7smr_1_182?tag=justus1ktp-20', '/gp/video/detail/B08FPWBP2M/ref=atv_br_def_r_br_c_Yzm1i7smr_1_183?tag=justus1ktp-20', '/gp/video/detail/B08CX45HZF/ref=atv_br_def_r_br_c_Yzm1i7smr_1_184?tag=justus1ktp-20', '/gp/video/detail/B08J8HVB6M/ref=atv_br_def_r_br_c_Yzm1i7smr_1_185?tag=justus1ktp-20', '/gp/video/detail/B07GRCL8YK/ref=atv_br_def_r_br_c_Yzm1i7smr_1_186?tag=justus1ktp-20', '/gp/video/detail/B07YCNV79J/ref=atv_br_def_r_br_c_Yzm1i7smr_1_187?tag=justus1ktp-20', '/gp/video/detail/B08L9FQZP6/ref=atv_br_def_r_br_c_Yzm1i7smr_1_188?tag=justus1ktp-20', '/gp/video/detail/B07ZYBSTRV/ref=atv_br_def_r_br_c_Yzm1i7smr_1_189?tag=justus1ktp-20', '/gp/video/detail/B08C2TP5FR/ref=atv_br_def_r_br_c_Yzm1i7smr_1_190?tag=justus1ktp-20', '/gp/video/detail/B07JDXGHN8/ref=atv_br_def_r_br_c_Yzm1i7smr_1_191?tag=justus1ktp-20', '/gp/video/detail/B08FQR7GD9/ref=atv_br_def_r_br_c_Yzm1i7smr_1_192?tag=justus1ktp-20', '/gp/video/detail/B0020M99LC/ref=atv_br_def_r_br_c_Yzm1i7smr_1_193?tag=justus1ktp-20', '/gp/video/detail/B08LS5ZWV8/ref=atv_br_def_r_br_c_Yzm1i7smr_1_194?tag=justus1ktp-20', '/gp/video/detail/B0752TQYRD/ref=atv_br_def_r_br_c_Yzm1i7smr_1_195?tag=justus1ktp-20', '/gp/video/detail/B002PT1KH6/ref=atv_br_def_r_br_c_Yzm1i7smr_1_196?tag=justus1ktp-20', '/gp/video/detail/B08QCK36JZ/ref=atv_br_def_r_br_c_Yzm1i7smr_1_197?tag=justus1ktp-20', '/gp/video/detail/B001D09OAI/ref=atv_br_def_r_br_c_Yzm1i7smr_1_198?tag=justus1ktp-20', '/gp/video/detail/B08M96H8PK/ref=atv_br_def_r_br_c_Yzm1i7smr_1_199?tag=justus1ktp-20', '/gp/video/detail/B01M4HJGH0/ref=atv_br_def_r_br_c_Yzm1i7smr_1_200?tag=justus1ktp-20', '/gp/video/detail/B07QMBPV4Z/ref=atv_br_def_r_br_c_Yzm1i7smr_1_201?tag=justus1ktp-20', '/gp/video/detail/B08LMJ93LL/ref=atv_br_def_r_br_c_Yzm1i7smr_1_202?tag=justus1ktp-20', '/gp/video/detail/B08N6TFPRP/ref=atv_br_def_r_br_c_Yzm1i7smr_1_203?tag=justus1ktp-20', '/gp/video/detail/B077YQ7PJ1/ref=atv_br_def_r_br_c_Yzm1i7smr_1_204?tag=justus1ktp-20', '/gp/video/detail/B07NVRF54Y/ref=atv_br_def_r_br_c_Yzm1i7smr_1_205?tag=justus1ktp-20', '/gp/video/detail/B000I9WW3G/ref=atv_br_def_r_br_c_Yzm1i7smr_1_206?tag=justus1ktp-20', '/gp/video/detail/B074SWRQ15/ref=atv_br_def_r_br_c_Yzm1i7smr_1_207?tag=justus1ktp-20', '/gp/video/detail/B002MX48VU/ref=atv_br_def_r_br_c_Yzm1i7smr_1_208?tag=justus1ktp-20',
@@ -209,6 +214,7 @@ movies = pd.DataFrame({
     'Actor Protagonico': casting
 })
 
-# add dataframe to csv file named 'movies.csv'
+# Transforma todo en un CSV el cual con Excel podemos transformar a XLSX
 movies.to_csv('Final-Peliculas.csv')
+# Muestra en consola que el proceso terminó
 print('Listo!')
